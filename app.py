@@ -11,7 +11,7 @@ from flask import Flask, jsonify
 #################################################
 # Database Setup
 #################################################
-engine = create_engine("sqlite:////Resources/hawaii.sqlite") #https://docs.sqlalchemy.org/en/13/core/engines.html initialize with 4 slashes
+engine = create_engine("sqlite:///Resources/hawaii.sqlite") 
 
 # reflect an existing database into a new model
 Base = automap_base()
@@ -39,7 +39,7 @@ def index():
         f"/api/v1.0/precipitation<br/>"
         f"/api/v1.0/stations<br/>"
         f"/api/v1.0/tobs<br/>"
-        f"/api/v1.0/<start>/<end>"
+        f"/api/v1.0/start_date(YYYY-MM-DD)/end_date(YYYY-MM-DD)"
     )
 
 @app.route("/api/v1.0/precipitation")
@@ -81,6 +81,24 @@ def tobs():
 
     tobs_list= []
     for date, tobs in results:
-        precipitation.append({date:tobs})
+        tobs_list.append({date:tobs})
 
     return jsonify(tobs_list)   
+
+@app.route("/api/v1.0/<start_date>/<end_date>")
+def calc_temps(start_date, end_date=None):
+    if end_date is None:
+        session = Session(engine)
+        resutls =  session.query(func.min(measurement.tobs), func.avg(measurement.tobs), func.max(measurement.tobs)).filter(measurement.date >= start_date).all()
+        session.close()
+    else:
+        session = Session(engine)
+        results = session.query(func.min(measurement.tobs), func.avg(measurement.tobs), func.max(measurement.tobs)).filter(measurement.date >= start_date).filter(measurement.date <= end_date).all()
+        session.close()
+    
+
+    temps = list(np.ravel(results))
+    return jsonify(temps)
+
+if __name__ == "__main__":
+    app.run(debug=True)
